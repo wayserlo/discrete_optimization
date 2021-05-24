@@ -1,24 +1,22 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
-Item = namedtuple("Item", ['index', 'value', 'weight', 'ratio'])
-class Node:
-    def __init__(self):
-        self.number = 0
-        self.estimate = 0
-        self.value = 0
-        self.rest_capacity = 0
-        self.taken = []
-    def __str__(self):
-        return f"Я узел под номером {self.number} с оценкой {self.estimate} и ценностью {self.value}, осталось места {self.rest_capacity}"
+Item = namedtuple("Item", ['index', 'value', 'weight', 'ratio', 'taken'])
 
-class Best:
-    def __init__(self):
-        self.value = 0
-        self.taken = []
-    def __str__(self):
-        return f"Best value {self.value}, беру {self.taken}"
+
+class Node:
+    def __init__(self, parent=None, number=0, value=0, weight=0, estimate=0):
+        self.left = None
+        self.right = None
+        self.parent = parent
+        self.value = value
+        self.weight = weight
+        self.estimate = estimate
+        self.number = number
+
+    def get_parent(self):
+        return self.parent
 
 def solve_it(input_data):
 # Modify this code to run your optimization algorithm
@@ -35,15 +33,11 @@ def solve_it(input_data):
     for i in range(1, item_count+1):
         line = lines[i]
         parts = line.split()
-        items.append(Item(i-1, int(parts[0]), int(parts[1]), float((float(parts[0]) / float(parts[1])))))
+        items.append(Item(i-1, int(parts[0]), int(parts[1]), float((float(parts[0]) / float(parts[1]))), 0))
 
     items1 = items[:]
     items1.sort(key=lambda x: x[3], reverse=True)
-    print(items1)
-    """
-    max_estimate = 0
-    for item in items1:
-        max_estimate += item.value"""
+
     def estimate(k, capacity):
         weight1 = 0
         estimate1 = 0
@@ -56,77 +50,50 @@ def solve_it(input_data):
                 break
         return estimate1
 
-    def DFS(node, best, left):
-        print(node)
-        print(best)
-        if node.number >= item_count:
-            if node.value >= best.value:
-                best.value = node.value
-                best.taken = node.taken[:]
-        else:
-            if left == 1:
-                if node.rest_capacity - items1[node.number].weight >= 0:
-                    node.value += items1[node.number].value
-                    node.taken[node.number] = 1
-                    node.rest_capacity -= items1[node.number].weight
-                    node.number += 1
-                    best1 = DFS(node, best, 1)
-                    best2 = DFS(node, best, 0)
-                    if max(best1.value, best2.value) > best.value:
-                        if best1.value >= best2.value:
-                            best.value = best1.value
-                            best.taken = best1.taken[:]
-                        else:
-                            best.value = best2.value
-                            best.taken = best2.taken[:]
-                else:
-                    best = DFS(node, best, 0)
-            else:
-                if node.value + estimate(node.number + 1, node.rest_capacity) >= best.value:
-                    node.estimate = node.value + estimate(node.number + 1, node.rest_capacity)
-                    node.number += 1
-                    best1 = DFS(node, best, 1)
-                    best2 = DFS(node, best, 0)
-                    if max(best1.value, best2.value) >= best.value:
-                        if best1.value >= best2.value:
-                            best.value = best1.value
-                            best.taken = best1.taken[:]
-                        else:
-                            best.value = best2.value
-                            best.taken = best2.taken[:]
-        return best
-
     root = Node()
-    root.number = 0
-    root.rest_capacity = capacity
-    root.estimate = estimate(0, root.rest_capacity)
-    root.taken = [0]*len(items1)
-    print(estimate(3, 2))
+    current = root
+    current_taken = [0]*len(items)
+    value = 0
+    best_taken = [0]*len(items)
+    while(True):
+        if current.right is None:
+            current.right = Node(current, current.number + 1, current.value + items1[current.number].value,
+                                 current.weight + items1[current.number].weight, current.estimate)
+            current_taken[current.number] = 1
+            current = current.right
 
-    best0 = Best()
-    best0.taken = [0] * len(items1)
-    best0.value = 0
+        elif current.left is None:
+            current.left = Node(current, current.number + 1, current.value,
+                                 current.weight, current.value + estimate(current.number+1, capacity - current.weight))
+            current_taken[current.number] = 0
+            current = current.left
+        else:
+            if current.number == 0:
+                break
+            current = current.get_parent()
+            continue
 
-    best1 = DFS(root, best0, 1)
-    best2 = DFS(root, best0, 0)
-    taken = [0]*item_count
+        if current.weight > capacity:
+            current = current.get_parent()
+            continue
 
-    if best1.value >= best2.value:
-        value = best1.value
-        for i in range(0, len(best1.taken)):
-            if best1.taken[i] == 1:
+        if current.number == item_count:
+            if value < current.value:
+                value = current.value
+                best_taken = current_taken[:]
+            current = current.get_parent()
+        else:
+            if current.estimate <= value:
+                current = current.get_parent()
+            else:
+                pass
+
+    taken = [0]*len(items)
+    for i in range(0, len(best_taken)):
+            if best_taken[i] == 1:
                 for item in items:
                     if item == items1[i]:
                         taken[item.index] = 1
-    else:
-        value = best2.value
-        for i in range (0, len(best2.taken)):
-            if best2.taken[i] == 1:
-                for item in items:
-                    if item == items1[i]:
-                        taken[item.index] = 1
-
-
 # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
     output_data += ' '.join(map(str, taken))
