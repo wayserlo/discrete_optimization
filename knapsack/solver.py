@@ -52,10 +52,12 @@ def solve_it(input_data):
 
     root = Node()
     current = root
+    current.estimate = estimate(0, capacity)
     current_taken = [0]*len(items)
     value = 0
     best_taken = [0]*len(items)
     while(True):
+        #print(current.number, current_taken)
         if current.right is None:
             current.right = Node(current, current.number + 1, current.value + items1[current.number].value,
                                  current.weight + items1[current.number].weight, current.estimate)
@@ -64,29 +66,30 @@ def solve_it(input_data):
 
         elif current.left is None:
             current.left = Node(current, current.number + 1, current.value,
-                                 current.weight, current.value + estimate(current.number+1, capacity - current.weight))
+                                current.weight, current.value + estimate(current.number+1, capacity - current.weight))
             current_taken[current.number] = 0
             current = current.left
         else:
             if current.number == 0:
                 break
-            current = current.get_parent()
+            current = current.parent
             continue
-
+        #print('number=', current.number, 'value=', current.value, 'weight=', current.weight, 'estimate=', current.estimate, current_taken)
         if current.weight > capacity:
-            current = current.get_parent()
+            current = current.parent
             continue
 
         if current.number == item_count:
             if value < current.value:
                 value = current.value
                 best_taken = current_taken[:]
-            current = current.get_parent()
+            current = current.parent
         else:
             if current.estimate <= value:
-                current = current.get_parent()
+                current = current.parent
             else:
                 pass
+        #input('pass')
 
     taken = [0]*len(items)
     for i in range(0, len(best_taken)):
